@@ -1,0 +1,132 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f3f5fb;
+  --foreground: #0f172a;
+  --surface: #ffffff;
+  --surface-muted: #f8faff;
+  --border: #d8deea;
+  --primary: #1d4ed8;
+  --primary-contrast: #ffffff;
+  --secondary: #7c3aed;
+  --success: #067647;
+  --warning: #b54708;
+  --danger: #b42318;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-border: var(--border);
+  --color-primary: var(--primary);
+  --color-primary-contrast: var(--primary-contrast);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #060b16;
+    --foreground: #e2e8f0;
+    --surface: #0f172a;
+    --surface-muted: #111c33;
+    --border: #22304b;
+    --primary: #3b82f6;
+    --primary-contrast: #ffffff;
+    --secondary: #a78bfa;
+    --success: #6ce9a6;
+    --warning: #fdb022;
+    --danger: #fda29b;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  background-image:
+    radial-gradient(circle at 0% 0%, color-mix(in oklab, var(--primary) 14%, transparent), transparent 35%),
+    radial-gradient(circle at 100% 0%, color-mix(in oklab, var(--secondary) 12%, transparent), transparent 30%);
+}
+
+code {
+  @apply rounded bg-black/5 px-1.5 py-0.5 text-xs;
+}
+
+.app-shell {
+  @apply mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-6 p-6 md:p-8;
+}
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  @apply rounded-2xl p-5 shadow-sm;
+}
+
+.panel-muted {
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  @apply rounded-2xl p-5;
+}
+
+.section-title {
+  @apply text-lg font-semibold tracking-tight md:text-xl;
+}
+
+.input {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  @apply rounded-xl px-3 py-2.5 text-sm outline-none transition;
+}
+
+.input:focus {
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--primary) 20%, transparent);
+}
+
+.btn {
+  @apply inline-flex items-center justify-center rounded-xl px-3 py-2.5 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-60;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: var(--primary-contrast);
+  box-shadow: 0 6px 18px color-mix(in oklab, var(--primary) 28%, transparent);
+}
+
+.btn-secondary {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--foreground);
+}
+
+.status {
+  border: 1px solid var(--border);
+  background: var(--surface-muted);
+  @apply rounded-xl px-3 py-2 text-sm;
+}
+
+.kpi {
+  @apply rounded-xl border p-4 text-sm;
+  border-color: var(--border);
+  background: var(--surface-muted);
+}
+
+.hero {
+  background: linear-gradient(
+    135deg,
+    color-mix(in oklab, var(--primary) 16%, var(--surface)),
+    color-mix(in oklab, var(--secondary) 12%, var(--surface))
+  );
+  border: 1px solid color-mix(in oklab, var(--primary) 30%, var(--border));
+  @apply rounded-2xl p-6;
+}
+
+.grid-cards {
+  @apply grid gap-4 md:grid-cols-2 xl:grid-cols-3;
+}
+
+.subtle {
+  @apply text-sm opacity-75;
+}
