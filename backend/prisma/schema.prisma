@@ -1,0 +1,120 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  USER
+}
+
+enum StorageProvider {
+  local
+  s3
+}
+
+model User {
+  id              String            @id @default(uuid())
+  email           String            @unique
+  passwordHash    String
+  role            Role
+  createdAt       DateTime          @default(now())
+
+  createdGroups   Group[]           @relation("GroupCreator")
+  createdFolders  Folder[]          @relation("FolderCreator")
+  uploadedFiles   File[]            @relation("FileUploader")
+  memberships     GroupMembership[]
+  folderPerms     FolderPermission[]
+  filePerms       FilePermission[]
+}
+
+model Group {
+  id          String            @id @default(uuid())
+  name        String
+  createdById String
+  createdAt   DateTime          @default(now())
+
+  createdBy   User              @relation("GroupCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  members     GroupMembership[]
+  folderPerms FolderPermission[]
+  filePerms   FilePermission[]
+}
+
+model GroupMembership {
+  id        String   @id @default(uuid())
+  groupId   String
+  userId    String
+  createdAt DateTime @default(now())
+
+  group     Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, userId])
+  @@index([userId])
+}
+
+model Folder {
+  id          String             @id @default(uuid())
+  name        String
+  createdById String
+  createdAt   DateTime           @default(now())
+
+  createdBy   User               @relation("FolderCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  files       File[]
+  permissions FolderPermission[]
+}
+
+model File {
+  id              String           @id @default(uuid())
+  folderId        String
+  storageKey      String
+  storageProvider StorageProvider
+  originalName    String
+  extension       String
+  mimeType        String
+  size            Int
+  uploadedById    String
+  createdAt       DateTime         @default(now())
+
+  folder          Folder           @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  uploadedBy      User             @relation("FileUploader", fields: [uploadedById], references: [id], onDelete: Restrict)
+  permissions     FilePermission[]
+
+  @@index([folderId])
+}
+
+model FolderPermission {
+  id        String   @id @default(uuid())
+  folderId  String
+  userId    String?
+  groupId   String?
+  createdAt DateTime @default(now())
+
+  folder    Folder   @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group     Group?   @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@index([folderId])
+  @@index([userId])
+  @@index([groupId])
+}
+
+model FilePermission {
+  id        String   @id @default(uuid())
+  fileId    String
+  userId    String?
+  groupId   String?
+  createdAt DateTime @default(now())
+
+  file      File     @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group     Group?   @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@index([fileId])
+  @@index([userId])
+  @@index([groupId])
+}
