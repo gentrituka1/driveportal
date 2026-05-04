@@ -4,11 +4,7 @@ import env from "../config/env";
 import { prisma } from "../lib/prisma";
 import { getAccessibleFiles, getAccessibleFolders, hasFileAccess } from "../services/accessService";
 import { createS3DownloadUrl, getLocalFileBuffer } from "../services/storageService";
-
-function getParamValue(value: string | string[] | undefined) {
-  if (Array.isArray(value)) return value[0];
-  return value;
-}
+import { getParamValue } from "../utils/request";
 
 export async function getDashboard(req: Request, res: Response) {
   if (!req.user) {

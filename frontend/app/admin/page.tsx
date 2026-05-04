@@ -4,14 +4,31 @@ import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import StatusNotice from "../../components/StatusNotice";
 import TopBar from "../../components/TopBar";
+import { useToast } from "../../components/ToastProvider";
 import { ApiError, apiRequest } from "../../lib/api";
-import { clearSession, loadSession } from "../../lib/session";
+import { clearSession, useStoredSession } from "../../lib/session";
 import type { FileItem, FolderItem, GroupItem, SessionUser, UserItem } from "../../lib/types";
+
+type AdminAction =
+  | "loadAdminData"
+  | "createUser"
+  | "createGroup"
+  | "addMember"
+  | "createFolder"
+  | "upload"
+  | "assignFilePermission"
+  | "assignFolderPermission"
+  | "deleteFile"
+  | "deleteFolder"
+  | "revokeFilePermission"
+  | "revokeFolderPermission";
 
 export default function AdminPage() {
   const router = useRouter();
-  const [token, setToken] = useState("");
-  const [sessionUser, setSessionUser] = useState<SessionUser | null>(null);
+  const { toastError, toastSuccess } = useToast();
+  const session = useStoredSession();
+  const token = session?.token ?? "";
+  const sessionUser: SessionUser | null = session?.user ?? null;
   const [status, setStatus] = useState("idle");
 
   const [users, setUsers] = useState<UserItem[]>([]);
@@ -32,36 +49,34 @@ export default function AdminPage() {
   const [permissionUserId, setPermissionUserId] = useState("");
   const [permissionGroupId, setPermissionGroupId] = useState("");
   const [permissionFileId, setPermissionFileId] = useState("");
+  const [folderPermissionTargetType, setFolderPermissionTargetType] = useState<"user" | "group">("user");
+  const [folderPermissionFolderId, setFolderPermissionFolderId] = useState("");
+  const [folderPermissionUserId, setFolderPermissionUserId] = useState("");
+  const [folderPermissionGroupId, setFolderPermissionGroupId] = useState("");
+  const [deleteFileId, setDeleteFileId] = useState("");
+  const [deleteFolderId, setDeleteFolderId] = useState("");
+  const [revokeFileId, setRevokeFileId] = useState("");
+  const [revokeFilePermissionId, setRevokeFilePermissionId] = useState("");
+  const [revokeFolderId, setRevokeFolderId] = useState("");
+  const [revokeFolderPermissionId, setRevokeFolderPermissionId] = useState("");
   const [isBusy, setIsBusy] = useState(false);
+  const [activeAction, setActiveAction] = useState<AdminAction | null>(null);
 
   useEffect(() => {
-    const session = loadSession();
-    if (!session) {
+    if (!token) {
       router.replace("/login");
       return;
     }
 
-    if (session.user.role !== "ADMIN") {
+    if (sessionUser?.role !== "ADMIN") {
       router.replace("/dashboard");
-      return;
     }
-
-    setToken(session.token);
-    setSessionUser(session.user);
-  }, [router]);
+  }, [router, token, sessionUser?.role]);
 
   useEffect(() => {
     if (!token) return;
     void loadAdminData(token);
   }, [token]);
-
-  useEffect(() => {
-    if (permissionTargetType === "user") {
-      setPermissionGroupId("");
-    } else {
-      setPermissionUserId("");
-    }
-  }, [permissionTargetType]);
 
   function handleApiError(error: unknown, fallback: string) {
     if (error instanceof ApiError) {
@@ -75,14 +90,17 @@ export default function AdminPage() {
         return;
       }
       setStatus(error.message);
+      toastError(error.message);
       return;
     }
     setStatus(fallback);
+    toastError(fallback);
   }
 
   async function loadAdminData(activeToken: string, manageBusy = true) {
     if (manageBusy) {
       setIsBusy(true);
+      setActiveAction("loadAdminData");
     }
     setStatus("Loading admin data...");
     try {
@@ -103,6 +121,7 @@ export default function AdminPage() {
     } finally {
       if (manageBusy) {
         setIsBusy(false);
+        setActiveAction(null);
       }
     }
   }
@@ -122,6 +141,7 @@ export default function AdminPage() {
     }
 
     setIsBusy(true);
+    setActiveAction("createUser");
     setStatus("Creating user...");
     try {
       await apiRequest("/api/admin/users", token, {
@@ -136,11 +156,13 @@ export default function AdminPage() {
       setNewUserEmail("");
       setNewUserPassword("");
       setStatus("User created.");
+      toastSuccess("User created successfully.");
       await loadAdminData(token, false);
     } catch (error) {
       handleApiError(error, "User creation failed.");
     } finally {
       setIsBusy(false);
+      setActiveAction(null);
     }
   }
 
@@ -154,6 +176,7 @@ export default function AdminPage() {
     }
 
     setIsBusy(true);
+    setActiveAction("createGroup");
     setStatus("Creating group...");
     try {
       await apiRequest("/api/admin/groups", token, {
@@ -163,11 +186,13 @@ export default function AdminPage() {
       });
       setNewGroupName("");
       setStatus("Group created.");
+      toastSuccess("Group created successfully.");
       await loadAdminData(token, false);
     } catch (error) {
       handleApiError(error, "Group creation failed.");
     } finally {
       setIsBusy(false);
+      setActiveAction(null);
     }
   }
 
@@ -181,6 +206,7 @@ export default function AdminPage() {
     }
 
     setIsBusy(true);
+    setActiveAction("addMember");
     setStatus("Adding user to group...");
     try {
       await apiRequest(`/api/admin/groups/${selectedGroupId}/members`, token, {
@@ -189,11 +215,13 @@ export default function AdminPage() {
         body: JSON.stringify({ userId: memberUserId }),
       });
       setStatus("Group membership updated.");
+      toastSuccess("User added to group successfully.");
       await loadAdminData(token, false);
     } catch (error) {
       handleApiError(error, "Adding member failed.");
     } finally {
       setIsBusy(false);
+      setActiveAction(null);
     }
   }
 
@@ -207,6 +235,7 @@ export default function AdminPage() {
     }
 
     setIsBusy(true);
+    setActiveAction("createFolder");
     setStatus("Creating folder...");
     try {
       await apiRequest("/api/admin/folders", token, {
@@ -216,11 +245,13 @@ export default function AdminPage() {
       });
       setNewFolderName("");
       setStatus("Folder created.");
+      toastSuccess("Folder created successfully.");
       await loadAdminData(token, false);
     } catch (error) {
       handleApiError(error, "Folder creation failed.");
     } finally {
       setIsBusy(false);
+      setActiveAction(null);
     }
   }
 
@@ -234,6 +265,7 @@ export default function AdminPage() {
     }
 
     setIsBusy(true);
+    setActiveAction("upload");
     setStatus("Uploading file...");
     try {
       const formData = new FormData();
@@ -247,11 +279,13 @@ export default function AdminPage() {
       setUploadFile(null);
       setUploadFolderId("");
       setStatus("File uploaded.");
+      toastSuccess("File uploaded successfully.");
       await loadAdminData(token, false);
     } catch (error) {
       handleApiError(error, "Upload failed.");
     } finally {
       setIsBusy(false);
+      setActiveAction(null);
     }
   }
 
@@ -278,6 +312,7 @@ export default function AdminPage() {
       permissionTargetType === "user" ? { userId: permissionUserId } : { groupId: permissionGroupId };
 
     setIsBusy(true);
+    setActiveAction("assignFilePermission");
     setStatus("Assigning file permission...");
     try {
       await apiRequest(`/api/admin/files/${permissionFileId}/permissions`, token, {
@@ -286,6 +321,7 @@ export default function AdminPage() {
         body: JSON.stringify(payload),
       });
       setStatus("Permission assigned.");
+      toastSuccess("File permission assigned successfully.");
       setPermissionFileId("");
       setPermissionUserId("");
       setPermissionGroupId("");
@@ -293,6 +329,163 @@ export default function AdminPage() {
       handleApiError(error, "Permission assignment failed.");
     } finally {
       setIsBusy(false);
+      setActiveAction(null);
+    }
+  }
+
+  async function assignFolderPermission(event: FormEvent) {
+    event.preventDefault();
+    if (!token) return;
+    if (isBusy) return;
+    if (!folderPermissionFolderId) {
+      setStatus("Select a folder first.");
+      return;
+    }
+
+    if (folderPermissionTargetType === "user" && !folderPermissionUserId) {
+      setStatus("Select a user for folder permission.");
+      return;
+    }
+
+    if (folderPermissionTargetType === "group" && !folderPermissionGroupId) {
+      setStatus("Select a group for folder permission.");
+      return;
+    }
+
+    const payload =
+      folderPermissionTargetType === "user"
+        ? { userId: folderPermissionUserId }
+        : { groupId: folderPermissionGroupId };
+
+    setIsBusy(true);
+    setActiveAction("assignFolderPermission");
+    setStatus("Assigning folder permission...");
+    try {
+      await apiRequest(`/api/admin/folders/${folderPermissionFolderId}/permissions`, token, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      setStatus("Folder permission assigned.");
+      toastSuccess("Folder permission assigned successfully.");
+      setFolderPermissionFolderId("");
+      setFolderPermissionUserId("");
+      setFolderPermissionGroupId("");
+    } catch (error) {
+      handleApiError(error, "Folder permission assignment failed.");
+    } finally {
+      setIsBusy(false);
+      setActiveAction(null);
+    }
+  }
+
+  async function deleteFile(event: FormEvent) {
+    event.preventDefault();
+    if (!token) return;
+    if (isBusy) return;
+    if (!deleteFileId) {
+      setStatus("Select a file to delete.");
+      return;
+    }
+
+    setIsBusy(true);
+    setActiveAction("deleteFile");
+    setStatus("Deleting file...");
+    try {
+      await apiRequest(`/api/admin/files/${deleteFileId}`, token, {
+        method: "DELETE",
+      });
+      setDeleteFileId("");
+      setStatus("File deleted.");
+      toastSuccess("File deleted successfully.");
+      await loadAdminData(token, false);
+    } catch (error) {
+      handleApiError(error, "File deletion failed.");
+    } finally {
+      setIsBusy(false);
+      setActiveAction(null);
+    }
+  }
+
+  async function deleteFolder(event: FormEvent) {
+    event.preventDefault();
+    if (!token) return;
+    if (isBusy) return;
+    if (!deleteFolderId) {
+      setStatus("Select a folder to delete.");
+      return;
+    }
+
+    setIsBusy(true);
+    setActiveAction("deleteFolder");
+    setStatus("Deleting folder...");
+    try {
+      await apiRequest(`/api/admin/folders/${deleteFolderId}`, token, {
+        method: "DELETE",
+      });
+      setDeleteFolderId("");
+      setStatus("Folder deleted.");
+      toastSuccess("Folder deleted successfully.");
+      await loadAdminData(token, false);
+    } catch (error) {
+      handleApiError(error, "Folder deletion failed.");
+    } finally {
+      setIsBusy(false);
+      setActiveAction(null);
+    }
+  }
+
+  async function revokeFilePermission(event: FormEvent) {
+    event.preventDefault();
+    if (!token) return;
+    if (isBusy) return;
+    if (!revokeFileId || !revokeFilePermissionId) {
+      setStatus("Provide file and file permission ID.");
+      return;
+    }
+
+    setIsBusy(true);
+    setActiveAction("revokeFilePermission");
+    setStatus("Revoking file permission...");
+    try {
+      await apiRequest(`/api/admin/files/${revokeFileId}/permissions/${revokeFilePermissionId}`, token, {
+        method: "DELETE",
+      });
+      setRevokeFilePermissionId("");
+      setStatus("File permission revoked.");
+      toastSuccess("File permission revoked successfully.");
+    } catch (error) {
+      handleApiError(error, "File permission revoke failed.");
+    } finally {
+      setIsBusy(false);
+      setActiveAction(null);
+    }
+  }
+
+  async function revokeFolderPermission(event: FormEvent) {
+    event.preventDefault();
+    if (!token) return;
+    if (isBusy) return;
+    if (!revokeFolderId || !revokeFolderPermissionId) {
+      setStatus("Provide folder and folder permission ID.");
+      return;
+    }
+
+    setIsBusy(true);
+    setActiveAction("revokeFolderPermission");
+    setStatus("Revoking folder permission...");
+    try {
+      await apiRequest(`/api/admin/folders/${revokeFolderId}/permissions/${revokeFolderPermissionId}`, token, {
+        method: "DELETE",
+      });
+      setRevokeFolderPermissionId("");
+      setStatus("Folder permission revoked.");
+      toastSuccess("Folder permission revoked successfully.");
+    } catch (error) {
+      handleApiError(error, "Folder permission revoke failed.");
+    } finally {
+      setIsBusy(false);
+      setActiveAction(null);
     }
   }
 
@@ -322,7 +515,7 @@ export default function AdminPage() {
             disabled={isBusy}
             type="button"
           >
-            {isBusy ? "Working..." : "Refresh"}
+            {activeAction === "loadAdminData" ? "Refreshing admin data..." : "Refresh"}
           </button>
         </div>
         <StatusNotice value={status} />
@@ -405,7 +598,7 @@ export default function AdminPage() {
             <option value="ADMIN">ADMIN</option>
           </select>
           <button className="btn btn-primary" disabled={isBusy} type="submit">
-            Create user
+            {activeAction === "createUser" ? "Creating user..." : "Create user"}
           </button>
         </form>
 
@@ -420,7 +613,7 @@ export default function AdminPage() {
             required
           />
           <button className="btn btn-primary" disabled={isBusy} type="submit">
-            Create group
+            {activeAction === "createGroup" ? "Creating group..." : "Create group"}
           </button>
         </form>
 
@@ -451,7 +644,7 @@ export default function AdminPage() {
               ))}
           </select>
           <button className="btn btn-primary" disabled={isBusy} type="submit">
-            Add member
+            {activeAction === "addMember" ? "Adding member..." : "Add member"}
           </button>
         </form>
 
@@ -466,12 +659,83 @@ export default function AdminPage() {
             required
           />
           <button className="btn btn-primary" disabled={isBusy} type="submit">
-            Create folder
+            {activeAction === "createFolder" ? "Creating folder..." : "Create folder"}
           </button>
         </form>
       </section>
 
       <section className="grid gap-4 md:grid-cols-2">
+        <form className="panel grid gap-2" onSubmit={assignFolderPermission}>
+          <h3 className="section-title">Assign folder permission</h3>
+          <p className="subtle">Grant folder access to user or group (best for dashboard visibility).</p>
+          <select
+            className="input"
+            value={folderPermissionFolderId}
+            onChange={(event) => setFolderPermissionFolderId(event.target.value)}
+            required
+          >
+            <option value="">Select folder</option>
+            {folders.map((folder) => (
+              <option key={folder.id} value={folder.id}>
+                {folder.name}
+              </option>
+            ))}
+          </select>
+
+          <select
+            className="input"
+            value={folderPermissionTargetType}
+            onChange={(event) => {
+              const nextType = event.target.value as "user" | "group";
+              setFolderPermissionTargetType(nextType);
+              if (nextType === "user") {
+                setFolderPermissionGroupId("");
+              } else {
+                setFolderPermissionUserId("");
+              }
+            }}
+          >
+            <option value="user">Assign to user</option>
+            <option value="group">Assign to group</option>
+          </select>
+
+          {folderPermissionTargetType === "user" ? (
+            <select
+              className="input"
+              value={folderPermissionUserId}
+              onChange={(event) => setFolderPermissionUserId(event.target.value)}
+              required
+            >
+              <option value="">Select user</option>
+              {users
+                .filter((item) => item.role === "USER")
+                .map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.email}
+                  </option>
+                ))}
+            </select>
+          ) : (
+            <select
+              className="input"
+              value={folderPermissionGroupId}
+              onChange={(event) => setFolderPermissionGroupId(event.target.value)}
+              required
+            >
+              <option value="">Select group</option>
+              {groups.map((group) => (
+                <option key={group.id} value={group.id}>
+                  {group.name}
+                </option>
+              ))}
+            </select>
+          )}
+
+          <button className="btn btn-secondary" disabled={isBusy} type="submit">
+            {activeAction === "assignFolderPermission" ? "Assigning folder permission..." : "Assign folder permission"}
+          </button>
+        </form>
+
         <form className="panel grid gap-2" onSubmit={upload}>
           <h3 className="section-title">Upload file</h3>
           <p className="subtle">Upload any file type and bind it to a folder.</p>
@@ -495,7 +759,7 @@ export default function AdminPage() {
             required
           />
           <button className="btn btn-primary" disabled={isBusy} type="submit">
-            Upload
+            {activeAction === "upload" ? "Uploading file..." : "Upload"}
           </button>
         </form>
 
@@ -518,7 +782,15 @@ export default function AdminPage() {
           <select
             className="input"
             value={permissionTargetType}
-            onChange={(event) => setPermissionTargetType(event.target.value as "user" | "group")}
+            onChange={(event) => {
+              const nextType = event.target.value as "user" | "group";
+              setPermissionTargetType(nextType);
+              if (nextType === "user") {
+                setPermissionGroupId("");
+              } else {
+                setPermissionUserId("");
+              }
+            }}
           >
             <option value="user">Assign to user</option>
             <option value="group">Assign to group</option>
@@ -557,7 +829,87 @@ export default function AdminPage() {
           )}
 
           <button className="btn btn-primary" disabled={isBusy} type="submit">
-            Assign permission
+            {activeAction === "assignFilePermission" ? "Assigning file permission..." : "Assign permission"}
+          </button>
+        </form>
+      </section>
+
+      <section className="grid gap-4 md:grid-cols-2">
+        <form className="panel grid gap-2" onSubmit={deleteFile}>
+          <h3 className="section-title">Delete file</h3>
+          <p className="subtle">Calls <code>/api/admin/files/:fileId</code>.</p>
+          <select className="input" value={deleteFileId} onChange={(event) => setDeleteFileId(event.target.value)} required>
+            <option value="">Select file</option>
+            {files.map((file) => (
+              <option key={file.id} value={file.id}>
+                {file.originalName}
+              </option>
+            ))}
+          </select>
+          <button className="btn btn-secondary" disabled={isBusy} type="submit">
+            {activeAction === "deleteFile" ? "Deleting file..." : "Delete file"}
+          </button>
+        </form>
+
+        <form className="panel grid gap-2" onSubmit={deleteFolder}>
+          <h3 className="section-title">Delete folder</h3>
+          <p className="subtle">Calls <code>/api/admin/folders/:folderId</code>.</p>
+          <select className="input" value={deleteFolderId} onChange={(event) => setDeleteFolderId(event.target.value)} required>
+            <option value="">Select folder</option>
+            {folders.map((folder) => (
+              <option key={folder.id} value={folder.id}>
+                {folder.name}
+              </option>
+            ))}
+          </select>
+          <button className="btn btn-secondary" disabled={isBusy} type="submit">
+            {activeAction === "deleteFolder" ? "Deleting folder..." : "Delete folder"}
+          </button>
+        </form>
+
+        <form className="panel grid gap-2" onSubmit={revokeFilePermission}>
+          <h3 className="section-title">Revoke file permission</h3>
+          <p className="subtle">Use file + permission IDs from API responses/logs.</p>
+          <select className="input" value={revokeFileId} onChange={(event) => setRevokeFileId(event.target.value)} required>
+            <option value="">Select file</option>
+            {files.map((file) => (
+              <option key={file.id} value={file.id}>
+                {file.originalName}
+              </option>
+            ))}
+          </select>
+          <input
+            className="input"
+            placeholder="Permission ID"
+            value={revokeFilePermissionId}
+            onChange={(event) => setRevokeFilePermissionId(event.target.value)}
+            required
+          />
+          <button className="btn btn-secondary" disabled={isBusy} type="submit">
+            {activeAction === "revokeFilePermission" ? "Revoking file permission..." : "Revoke file permission"}
+          </button>
+        </form>
+
+        <form className="panel grid gap-2" onSubmit={revokeFolderPermission}>
+          <h3 className="section-title">Revoke folder permission</h3>
+          <p className="subtle">Use folder + permission IDs from API responses/logs.</p>
+          <select className="input" value={revokeFolderId} onChange={(event) => setRevokeFolderId(event.target.value)} required>
+            <option value="">Select folder</option>
+            {folders.map((folder) => (
+              <option key={folder.id} value={folder.id}>
+                {folder.name}
+              </option>
+            ))}
+          </select>
+          <input
+            className="input"
+            placeholder="Permission ID"
+            value={revokeFolderPermissionId}
+            onChange={(event) => setRevokeFolderPermissionId(event.target.value)}
+            required
+          />
+          <button className="btn btn-secondary" disabled={isBusy} type="submit">
+            {activeAction === "revokeFolderPermission" ? "Revoking folder permission..." : "Revoke folder permission"}
           </button>
         </form>
       </section>

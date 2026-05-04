@@ -12,6 +12,34 @@ export class ApiError extends Error {
   }
 }
 
+async function parseJsonSafely(response: Response): Promise<unknown> {
+  const contentType = response.headers.get("content-type") || "";
+  if (!contentType.includes("application/json")) return null;
+
+  try {
+    return await response.json();
+  } catch {
+    return null;
+  }
+}
+
+function getErrorMessage(payload: unknown) {
+  return typeof payload === "object" && payload && "message" in payload && typeof payload.message === "string"
+    ? payload.message
+    : "Request failed.";
+}
+
+export async function publicApiRequest<T = unknown>(path: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(`${apiBase}${path}`, init);
+  const payload = await parseJsonSafely(response);
+
+  if (!response.ok) {
+    throw new ApiError(response.status, getErrorMessage(payload));
+  }
+
+  return payload as T;
+}
+
 export async function apiRequest<T = unknown>(path: string, token: string, init?: RequestInit): Promise<T> {
   const headers = new Headers(init?.headers);
   if (token) {
@@ -22,24 +50,10 @@ export async function apiRequest<T = unknown>(path: string, token: string, init?
     ...init,
     headers,
   });
-
-  const contentType = response.headers.get("content-type") || "";
-  let payload: unknown = null;
-
-  if (contentType.includes("application/json")) {
-    try {
-      payload = await response.json();
-    } catch {
-      payload = null;
-    }
-  }
+  const payload = await parseJsonSafely(response);
 
   if (!response.ok) {
-    const message =
-      typeof payload === "object" && payload && "message" in payload && typeof payload.message === "string"
-        ? payload.message
-        : "Request failed.";
-    throw new ApiError(response.status, message);
+    throw new ApiError(response.status, getErrorMessage(payload));
   }
 
   return payload as T;

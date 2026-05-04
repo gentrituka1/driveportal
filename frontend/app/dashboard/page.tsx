@@ -1,71 +1,70 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import StatusNotice from "../../components/StatusNotice";
 import TopBar from "../../components/TopBar";
+import { useToast } from "../../components/ToastProvider";
 import { ApiError, apiBase, apiRequest } from "../../lib/api";
-import { clearSession, loadSession } from "../../lib/session";
+import { clearSession, useStoredSession } from "../../lib/session";
 import type { DashboardData, SessionUser } from "../../lib/types";
 
 export default function DashboardPage() {
   const router = useRouter();
-  const [token, setToken] = useState("");
-  const [sessionUser, setSessionUser] = useState<SessionUser | null>(null);
+  const { toastError, toastSuccess } = useToast();
+  const session = useStoredSession();
+  const token = session?.token ?? "";
+  const sessionUser: SessionUser | null = session?.user ?? null;
   const [status, setStatus] = useState("idle");
-  const [dashboard, setDashboard] = useState<DashboardData | null>(null);
-  const [isBusy, setIsBusy] = useState(false);
+  const lastDashboardErrorRef = useRef<unknown>(null);
 
   useEffect(() => {
-    const session = loadSession();
-    if (!session) {
+    if (!token) {
       router.replace("/login");
-      return;
     }
+  }, [router, token]);
 
-    setToken(session.token);
-    setSessionUser(session.user);
-  }, [router]);
+  const dashboardQuery = useQuery({
+    queryKey: ["dashboard", token],
+    queryFn: () => apiRequest<DashboardData>("/api/me/dashboard", token),
+    enabled: Boolean(token),
+  });
 
   useEffect(() => {
-    if (!token) return;
-    void loadDashboard(token);
-  }, [token]);
-
-  function handleApiError(error: unknown, fallback: string) {
-    if (error instanceof ApiError) {
-      if (error.status === 401) {
+    if (dashboardQuery.isError && lastDashboardErrorRef.current !== dashboardQuery.error) {
+      lastDashboardErrorRef.current = dashboardQuery.error;
+      if (dashboardQuery.error instanceof ApiError && dashboardQuery.error.status === 401) {
         clearSession();
         router.replace("/login");
         return;
       }
-      setStatus(error.message);
-      return;
+      const message = dashboardQuery.error instanceof ApiError ? dashboardQuery.error.message : "Dashboard load failed.";
+      toastError(message);
     }
-    setStatus(fallback);
-  }
+  }, [
+    dashboardQuery.error,
+    dashboardQuery.isError,
+    router,
+    toastError,
+  ]);
 
-  async function loadDashboard(activeToken: string) {
-    setIsBusy(true);
-    setStatus("Loading dashboard...");
-    try {
-      const payload = await apiRequest<DashboardData>("/api/me/dashboard", activeToken);
-      setDashboard(payload);
-      setStatus("Dashboard loaded.");
-    } catch (error) {
-      handleApiError(error, "Dashboard load failed.");
-    } finally {
-      setIsBusy(false);
-    }
-  }
+  const displayStatus =
+    dashboardQuery.isLoading || dashboardQuery.isFetching
+      ? "Loading dashboard..."
+      : dashboardQuery.isSuccess
+        ? "Dashboard loaded."
+        : dashboardQuery.isError
+          ? dashboardQuery.error instanceof ApiError
+            ? dashboardQuery.error.message
+            : "Dashboard load failed."
+          : status;
 
-  async function downloadAccessibleFile(fileId: string, fileName: string) {
-    if (!token) return;
-    if (isBusy) return;
+  const downloadMutation = useMutation({
+    mutationFn: async ({ fileId, fileName }: { fileId: string; fileName: string }) => {
+      if (!token) return;
 
-    setIsBusy(true);
-    setStatus("Downloading file...");
-    try {
+      setStatus("Downloading file...");
       const response = await fetch(`${apiBase}/api/me/files/${fileId}/download`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -83,8 +82,7 @@ export default function DashboardPage() {
           router.replace("/login");
           return;
         }
-        setStatus(message);
-        return;
+        throw new Error(message);
       }
 
       const contentType = response.headers.get("content-type") || "";
@@ -92,8 +90,7 @@ export default function DashboardPage() {
         const payload = await response.json();
         if (payload.downloadUrl) {
           window.open(payload.downloadUrl, "_blank");
-          setStatus("Download URL opened.");
-          return;
+          return "Download URL opened.";
         }
       }
 
@@ -106,12 +103,24 @@ export default function DashboardPage() {
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
-      setStatus("File downloaded.");
-    } catch {
-      setStatus("Download failed.");
-    } finally {
-      setIsBusy(false);
-    }
+      return "File downloaded.";
+    },
+    onSuccess: (message) => {
+      if (!message) return;
+      setStatus(message);
+      toastSuccess(message);
+    },
+    onError: (error) => {
+      const message = error instanceof Error ? error.message : "Download failed.";
+      setStatus(message);
+      toastError(message);
+    },
+  });
+
+  function downloadAccessibleFile(fileId: string, fileName: string) {
+    if (!token) return;
+    if (downloadMutation.isPending) return;
+    downloadMutation.mutate({ fileId, fileName });
   }
 
   function logout() {
@@ -140,24 +149,26 @@ export default function DashboardPage() {
           <h2 className="section-title">My files</h2>
           <button
             className="btn btn-primary"
-            onClick={() => token && loadDashboard(token)}
-            disabled={isBusy}
+            onClick={() => dashboardQuery.refetch()}
+            disabled={dashboardQuery.isFetching}
             type="button"
           >
-            {isBusy ? "Working..." : "Refresh"}
+            {dashboardQuery.isFetching ? "Refreshing..." : "Refresh"}
           </button>
         </div>
-        <StatusNotice value={status} />
+        <StatusNotice value={displayStatus} />
 
-        {!dashboard ? (
+        {dashboardQuery.isLoading ? (
+          <p className="mt-4 text-sm opacity-75">Loading your shared content...</p>
+        ) : !dashboardQuery.data ? (
           <p className="mt-4 text-sm opacity-75">No data loaded yet.</p>
         ) : (
           <div className="mt-4 grid gap-4 md:grid-cols-2">
             <div className="panel-muted">
               <h3 className="font-medium">Folders</h3>
               <ul className="mt-2 list-inside list-disc text-sm leading-7">
-                {dashboard.folders.length === 0 ? <li className="list-none subtle">No folders shared yet.</li> : null}
-                {dashboard.folders.map((folder) => (
+                {dashboardQuery.data.folders.length === 0 ? <li className="list-none subtle">No folders shared yet.</li> : null}
+                {dashboardQuery.data.folders.map((folder) => (
                   <li key={folder.id}>{folder.name}</li>
                 ))}
               </ul>
@@ -165,8 +176,8 @@ export default function DashboardPage() {
             <div className="panel-muted">
               <h3 className="font-medium">Files</h3>
               <ul className="mt-2 grid gap-2 text-sm">
-                {dashboard.files.length === 0 ? <li className="list-none subtle">No files shared yet.</li> : null}
-                {dashboard.files.map((file) => (
+                {dashboardQuery.data.files.length === 0 ? <li className="list-none subtle">No files shared yet.</li> : null}
+                {dashboardQuery.data.files.map((file) => (
                   <li
                     className="flex items-center justify-between gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3"
                     key={file.id}
@@ -176,11 +187,11 @@ export default function DashboardPage() {
                     </span>
                     <button
                       className="btn btn-primary px-3 py-1.5 text-xs"
-                      disabled={isBusy}
+                      disabled={downloadMutation.isPending}
                       onClick={() => downloadAccessibleFile(file.id, file.originalName)}
                       type="button"
                     >
-                      Download
+                      {downloadMutation.isPending ? "Downloading..." : "Download"}
                     </button>
                   </li>
                 ))}

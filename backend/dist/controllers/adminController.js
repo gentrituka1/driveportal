@@ -23,6 +23,7 @@ const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const zod_1 = require("zod");
 const prisma_1 = require("../lib/prisma");
 const storageService_1 = require("../services/storageService");
+const request_1 = require("../utils/request");
 const createUserSchema = zod_1.z.object({
     email: zod_1.z.email(),
     password: zod_1.z.string().min(8),
@@ -48,11 +49,6 @@ const permissionSchema = zod_1.z
     .refine((data) => Boolean(data.userId) !== Boolean(data.groupId), {
     message: "Provide exactly one of userId or groupId.",
 });
-function getParamValue(value) {
-    if (Array.isArray(value))
-        return value[0];
-    return value;
-}
 async function createUser(req, res) {
     const parsed = createUserSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -127,7 +123,7 @@ async function listGroups(_req, res) {
     return res.json({ groups });
 }
 async function addMember(req, res) {
-    const groupId = getParamValue(req.params.groupId);
+    const groupId = (0, request_1.getParamValue)(req.params.groupId);
     if (!groupId) {
         return res.status(400).json({ message: "groupId is required." });
     }
@@ -260,7 +256,7 @@ async function uploadFile(req, res) {
     });
 }
 async function assignFolderPermission(req, res) {
-    const folderId = getParamValue(req.params.folderId);
+    const folderId = (0, request_1.getParamValue)(req.params.folderId);
     if (!folderId) {
         return res.status(400).json({ message: "folderId is required." });
     }
@@ -305,7 +301,7 @@ async function assignFolderPermission(req, res) {
     return res.status(201).json({ permission });
 }
 async function assignFilePermission(req, res) {
-    const fileId = getParamValue(req.params.fileId);
+    const fileId = (0, request_1.getParamValue)(req.params.fileId);
     if (!fileId) {
         return res.status(400).json({ message: "fileId is required." });
     }
@@ -350,8 +346,8 @@ async function assignFilePermission(req, res) {
     return res.status(201).json({ permission });
 }
 async function revokeFolderPermission(req, res) {
-    const folderId = getParamValue(req.params.folderId);
-    const permissionId = getParamValue(req.params.permissionId);
+    const folderId = (0, request_1.getParamValue)(req.params.folderId);
+    const permissionId = (0, request_1.getParamValue)(req.params.permissionId);
     if (!folderId || !permissionId) {
         return res.status(400).json({ message: "folderId and permissionId are required." });
     }
@@ -366,8 +362,8 @@ async function revokeFolderPermission(req, res) {
     return res.json({ message: "Folder permission revoked." });
 }
 async function revokeFilePermission(req, res) {
-    const fileId = getParamValue(req.params.fileId);
-    const permissionId = getParamValue(req.params.permissionId);
+    const fileId = (0, request_1.getParamValue)(req.params.fileId);
+    const permissionId = (0, request_1.getParamValue)(req.params.permissionId);
     if (!fileId || !permissionId) {
         return res.status(400).json({ message: "fileId and permissionId are required." });
     }
@@ -382,7 +378,7 @@ async function revokeFilePermission(req, res) {
     return res.json({ message: "File permission revoked." });
 }
 async function deleteFile(req, res) {
-    const fileId = getParamValue(req.params.fileId);
+    const fileId = (0, request_1.getParamValue)(req.params.fileId);
     if (!fileId) {
         return res.status(400).json({ message: "fileId is required." });
     }
@@ -394,7 +390,7 @@ async function deleteFile(req, res) {
     return res.json({ message: "File deleted." });
 }
 async function deleteFolder(req, res) {
-    const folderId = getParamValue(req.params.folderId);
+    const folderId = (0, request_1.getParamValue)(req.params.folderId);
     if (!folderId) {
         return res.status(400).json({ message: "folderId is required." });
     }

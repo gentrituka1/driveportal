@@ -4,6 +4,7 @@ import type { Request, Response } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
 import { uploadBuffer } from "../services/storageService";
+import { getParamValue } from "../utils/request";
 
 const createUserSchema = z.object({
   email: z.email(),
@@ -35,11 +36,6 @@ const permissionSchema = z
   .refine((data) => Boolean(data.userId) !== Boolean(data.groupId), {
     message: "Provide exactly one of userId or groupId.",
   });
-
-function getParamValue(value: string | string[] | undefined) {
-  if (Array.isArray(value)) return value[0];
-  return value;
-}
 
 export async function createUser(req: Request, res: Response) {
   const parsed = createUserSchema.safeParse(req.body);

@@ -130,3 +130,29 @@ code {
 .subtle {
   @apply text-sm opacity-75;
 }
+
+.toast-region {
+  @apply fixed right-4 top-4 z-50 flex w-[min(92vw,26rem)] flex-col gap-2;
+}
+
+.toast {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  @apply flex items-start justify-between gap-3 rounded-xl px-3 py-2 text-sm shadow-lg;
+}
+
+.toast-info {
+  border-color: color-mix(in oklab, var(--primary) 35%, var(--border));
+}
+
+.toast-success {
+  border-color: color-mix(in oklab, var(--success) 45%, var(--border));
+}
+
+.toast-error {
+  border-color: color-mix(in oklab, var(--danger) 45%, var(--border));
+}
+
+.toast-close {
+  @apply rounded px-1 text-base leading-none opacity-70 transition hover:opacity-100;
+}

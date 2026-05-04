@@ -10,11 +10,7 @@ const env_1 = __importDefault(require("../config/env"));
 const prisma_1 = require("../lib/prisma");
 const accessService_1 = require("../services/accessService");
 const storageService_1 = require("../services/storageService");
-function getParamValue(value) {
-    if (Array.isArray(value))
-        return value[0];
-    return value;
-}
+const request_1 = require("../utils/request");
 async function getDashboard(req, res) {
     if (!req.user) {
         return res.status(401).json({ message: "Unauthorized." });
@@ -34,7 +30,7 @@ async function downloadFile(req, res) {
     if (!req.user) {
         return res.status(401).json({ message: "Unauthorized." });
     }
-    const fileId = getParamValue(req.params.fileId);
+    const fileId = (0, request_1.getParamValue)(req.params.fileId);
     if (!fileId) {
         return res.status(400).json({ message: "fileId is required." });
     }
