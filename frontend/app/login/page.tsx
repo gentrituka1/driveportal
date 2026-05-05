@@ -149,9 +149,9 @@ export default function LoginPage() {
 
       <section className="grid gap-4 md:grid-cols-[1.3fr_.9fr]">
         <div className="grid gap-4">
-          <div className="panel">
+          <div className="form-card">
             <h2 className="section-title mb-3">Sign in</h2>
-            <form className="grid gap-3 sm:max-w-md" onSubmit={login}>
+            <form className="form-fields" onSubmit={login}>
               <input
                 className="input"
                 value={email}
@@ -168,18 +168,20 @@ export default function LoginPage() {
                 placeholder="Password"
                 required
               />
+              <div className="form-actions">
               <button className="btn btn-primary" disabled={isSubmitting} type="submit">
                 {isSubmitting ? "Logging in..." : "Login"}
               </button>
+              </div>
             </form>
           </div>
 
-          <div className="panel">
+          <div className="form-card">
             <h2 className="section-title mb-3">Self-register</h2>
             <p className="subtle mb-3">
               Uses <code>/api/auth/register</code>. Works only when backend <code>ALLOW_SELF_REGISTRATION=true</code>.
             </p>
-            <form className="grid gap-3 sm:max-w-md" onSubmit={register}>
+            <form className="form-fields" onSubmit={register}>
               <input
                 className="input"
                 value={registerEmail}
@@ -196,9 +198,11 @@ export default function LoginPage() {
                 placeholder="Password (min 8)"
                 required
               />
+              <div className="form-actions">
               <button className="btn btn-secondary" disabled={isRegistering} type="submit">
                 {isRegistering ? "Registering..." : "Create account"}
               </button>
+              </div>
             </form>
             <div className="mt-3">
               <StatusNotice value={registerStatus} />

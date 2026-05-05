@@ -179,14 +179,14 @@ export default function DashboardPage() {
                 {dashboardQuery.data.files.length === 0 ? <li className="list-none subtle">No files shared yet.</li> : null}
                 {dashboardQuery.data.files.map((file) => (
                   <li
-                    className="flex items-center justify-between gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3"
+                    className="flex flex-col gap-3 rounded-lg border border-border bg-surface p-3 sm:flex-row sm:items-center sm:justify-between"
                     key={file.id}
                   >
                     <span>
                       {file.originalName} ({Math.ceil(file.size / 1024)} KB)
                     </span>
                     <button
-                      className="btn btn-primary px-3 py-1.5 text-xs"
+                      className="btn btn-primary sm:min-w-32"
                       disabled={downloadMutation.isPending}
                       onClick={() => downloadAccessibleFile(file.id, file.originalName)}
                       type="button"

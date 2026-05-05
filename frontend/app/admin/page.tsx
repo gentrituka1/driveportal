@@ -569,10 +569,11 @@ export default function AdminPage() {
         </div>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-2">
-        <form className="panel grid gap-2" onSubmit={createUser}>
+      <section className="form-grid">
+        <form className="form-card" onSubmit={createUser}>
           <h3 className="section-title">Create user</h3>
           <p className="subtle">Create platform users with USER or ADMIN roles.</p>
+          <div className="form-fields">
           <input
             className="input"
             placeholder="User email"
@@ -597,14 +598,18 @@ export default function AdminPage() {
             <option value="USER">USER</option>
             <option value="ADMIN">ADMIN</option>
           </select>
+          </div>
+          <div className="form-actions">
           <button className="btn btn-primary" disabled={isBusy} type="submit">
             {activeAction === "createUser" ? "Creating user..." : "Create user"}
           </button>
+          </div>
         </form>
 
-        <form className="panel grid gap-2" onSubmit={createGroup}>
+        <form className="form-card" onSubmit={createGroup}>
           <h3 className="section-title">Create group</h3>
           <p className="subtle">Groups simplify permission assignment to multiple users.</p>
+          <div className="form-fields">
           <input
             className="input"
             placeholder="Group name"
@@ -612,14 +617,18 @@ export default function AdminPage() {
             onChange={(event) => setNewGroupName(event.target.value)}
             required
           />
+          </div>
+          <div className="form-actions">
           <button className="btn btn-primary" disabled={isBusy} type="submit">
             {activeAction === "createGroup" ? "Creating group..." : "Create group"}
           </button>
+          </div>
         </form>
 
-        <form className="panel grid gap-2" onSubmit={addMember}>
+        <form className="form-card" onSubmit={addMember}>
           <h3 className="section-title">Add group member</h3>
           <p className="subtle">Attach an existing USER account to a group.</p>
+          <div className="form-fields">
           <select
             className="input"
             value={selectedGroupId}
@@ -643,14 +652,18 @@ export default function AdminPage() {
                 </option>
               ))}
           </select>
+          </div>
+          <div className="form-actions">
           <button className="btn btn-primary" disabled={isBusy} type="submit">
             {activeAction === "addMember" ? "Adding member..." : "Add member"}
           </button>
+          </div>
         </form>
 
-        <form className="panel grid gap-2" onSubmit={createFolder}>
+        <form className="form-card" onSubmit={createFolder}>
           <h3 className="section-title">Create folder</h3>
           <p className="subtle">Create a top-level folder for organized distribution.</p>
+          <div className="form-fields">
           <input
             className="input"
             placeholder="Folder name"
@@ -658,16 +671,20 @@ export default function AdminPage() {
             onChange={(event) => setNewFolderName(event.target.value)}
             required
           />
+          </div>
+          <div className="form-actions">
           <button className="btn btn-primary" disabled={isBusy} type="submit">
             {activeAction === "createFolder" ? "Creating folder..." : "Create folder"}
           </button>
+          </div>
         </form>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-2">
-        <form className="panel grid gap-2" onSubmit={assignFolderPermission}>
+      <section className="form-grid">
+        <form className="form-card" onSubmit={assignFolderPermission}>
           <h3 className="section-title">Assign folder permission</h3>
           <p className="subtle">Grant folder access to user or group (best for dashboard visibility).</p>
+          <div className="form-fields">
           <select
             className="input"
             value={folderPermissionFolderId}
@@ -730,15 +747,19 @@ export default function AdminPage() {
               ))}
             </select>
           )}
+          </div>
 
+          <div className="form-actions">
           <button className="btn btn-secondary" disabled={isBusy} type="submit">
             {activeAction === "assignFolderPermission" ? "Assigning folder permission..." : "Assign folder permission"}
           </button>
+          </div>
         </form>
 
-        <form className="panel grid gap-2" onSubmit={upload}>
+        <form className="form-card" onSubmit={upload}>
           <h3 className="section-title">Upload file</h3>
           <p className="subtle">Upload any file type and bind it to a folder.</p>
+          <div className="form-fields">
           <select
             className="input"
             value={uploadFolderId}
@@ -758,14 +779,18 @@ export default function AdminPage() {
             onChange={(event) => setUploadFile(event.target.files?.[0] || null)}
             required
           />
+          </div>
+          <div className="form-actions">
           <button className="btn btn-primary" disabled={isBusy} type="submit">
             {activeAction === "upload" ? "Uploading file..." : "Upload"}
           </button>
+          </div>
         </form>
 
-        <form className="panel grid gap-2" onSubmit={assignFilePermission}>
+        <form className="form-card" onSubmit={assignFilePermission}>
           <h3 className="section-title">Assign file permission</h3>
           <p className="subtle">Grant view/download access to a user or group.</p>
+          <div className="form-fields">
           <select
             className="input"
             value={permissionFileId}
@@ -827,17 +852,21 @@ export default function AdminPage() {
               ))}
             </select>
           )}
+          </div>
 
+          <div className="form-actions">
           <button className="btn btn-primary" disabled={isBusy} type="submit">
             {activeAction === "assignFilePermission" ? "Assigning file permission..." : "Assign permission"}
           </button>
+          </div>
         </form>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-2">
-        <form className="panel grid gap-2" onSubmit={deleteFile}>
+      <section className="form-grid">
+        <form className="form-card" onSubmit={deleteFile}>
           <h3 className="section-title">Delete file</h3>
           <p className="subtle">Calls <code>/api/admin/files/:fileId</code>.</p>
+          <div className="form-fields">
           <select className="input" value={deleteFileId} onChange={(event) => setDeleteFileId(event.target.value)} required>
             <option value="">Select file</option>
             {files.map((file) => (
@@ -846,14 +875,18 @@ export default function AdminPage() {
               </option>
             ))}
           </select>
+          </div>
+          <div className="form-actions">
           <button className="btn btn-secondary" disabled={isBusy} type="submit">
             {activeAction === "deleteFile" ? "Deleting file..." : "Delete file"}
           </button>
+          </div>
         </form>
 
-        <form className="panel grid gap-2" onSubmit={deleteFolder}>
+        <form className="form-card" onSubmit={deleteFolder}>
           <h3 className="section-title">Delete folder</h3>
           <p className="subtle">Calls <code>/api/admin/folders/:folderId</code>.</p>
+          <div className="form-fields">
           <select className="input" value={deleteFolderId} onChange={(event) => setDeleteFolderId(event.target.value)} required>
             <option value="">Select folder</option>
             {folders.map((folder) => (
@@ -862,14 +895,18 @@ export default function AdminPage() {
               </option>
             ))}
           </select>
+          </div>
+          <div className="form-actions">
           <button className="btn btn-secondary" disabled={isBusy} type="submit">
             {activeAction === "deleteFolder" ? "Deleting folder..." : "Delete folder"}
           </button>
+          </div>
         </form>
 
-        <form className="panel grid gap-2" onSubmit={revokeFilePermission}>
+        <form className="form-card" onSubmit={revokeFilePermission}>
           <h3 className="section-title">Revoke file permission</h3>
           <p className="subtle">Use file + permission IDs from API responses/logs.</p>
+          <div className="form-fields">
           <select className="input" value={revokeFileId} onChange={(event) => setRevokeFileId(event.target.value)} required>
             <option value="">Select file</option>
             {files.map((file) => (
@@ -885,14 +922,18 @@ export default function AdminPage() {
             onChange={(event) => setRevokeFilePermissionId(event.target.value)}
             required
           />
+          </div>
+          <div className="form-actions">
           <button className="btn btn-secondary" disabled={isBusy} type="submit">
             {activeAction === "revokeFilePermission" ? "Revoking file permission..." : "Revoke file permission"}
           </button>
+          </div>
         </form>
 
-        <form className="panel grid gap-2" onSubmit={revokeFolderPermission}>
+        <form className="form-card" onSubmit={revokeFolderPermission}>
           <h3 className="section-title">Revoke folder permission</h3>
           <p className="subtle">Use folder + permission IDs from API responses/logs.</p>
+          <div className="form-fields">
           <select className="input" value={revokeFolderId} onChange={(event) => setRevokeFolderId(event.target.value)} required>
             <option value="">Select folder</option>
             {folders.map((folder) => (
@@ -908,9 +949,12 @@ export default function AdminPage() {
             onChange={(event) => setRevokeFolderPermissionId(event.target.value)}
             required
           />
+          </div>
+          <div className="form-actions">
           <button className="btn btn-secondary" disabled={isBusy} type="submit">
             {activeAction === "revokeFolderPermission" ? "Revoking folder permission..." : "Revoke folder permission"}
           </button>
+          </div>
         </form>
       </section>
     </main>
