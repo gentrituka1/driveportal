@@ -37,6 +37,34 @@ const permissionSchema = z
     message: "Provide exactly one of userId or groupId.",
   });
 
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function getNextAvailableName(baseName: string, existingNames: string[]) {
+  const baseLower = baseName.toLowerCase();
+  const suffixRegex = new RegExp(`^${escapeRegExp(baseName)} \\((\\d+)\\)$`, "i");
+
+  const hasBaseName = existingNames.some((name) => name.toLowerCase() === baseLower);
+  if (!hasBaseName) {
+    return baseName;
+  }
+
+  let maxSuffix = 0;
+  for (const name of existingNames) {
+    const match = name.match(suffixRegex);
+    if (!match) continue;
+
+    const suffix = Number.parseInt(match[1], 10);
+    if (Number.isNaN(suffix)) continue;
+    if (suffix > maxSuffix) {
+      maxSuffix = suffix;
+    }
+  }
+
+  return `${baseName} (${maxSuffix + 1})`;
+}
+
 export async function createUser(req: Request, res: Response) {
   const parsed = createUserSchema.safeParse(req.body);
   if (!parsed.success) {
@@ -83,9 +111,26 @@ export async function createGroup(req: Request, res: Response) {
     return res.status(400).json({ message: "Validation failed.", issues: parsed.error.issues });
   }
 
+  const baseName = parsed.data.name;
+  const existingGroups = await prisma.group.findMany({
+    where: {
+      OR: [
+        { name: { equals: baseName, mode: "insensitive" } },
+        { name: { startsWith: `${baseName} (`, mode: "insensitive" } },
+      ],
+    },
+    select: { name: true },
+  });
+  const nextName = getNextAvailableName(
+    baseName,
+    existingGroups
+      .map((group) => group.name)
+      .filter((name) => name.toLowerCase() === baseName.toLowerCase() || /\(\d+\)$/.test(name))
+  );
+
   const group = await prisma.group.create({
     data: {
-      name: parsed.data.name,
+      name: nextName,
       createdById: req.user.id,
     },
   });
@@ -175,9 +220,26 @@ export async function createFolder(req: Request, res: Response) {
     return res.status(400).json({ message: "Validation failed.", issues: parsed.error.issues });
   }
 
+  const baseName = parsed.data.name;
+  const existingFolders = await prisma.folder.findMany({
+    where: {
+      OR: [
+        { name: { equals: baseName, mode: "insensitive" } },
+        { name: { startsWith: `${baseName} (`, mode: "insensitive" } },
+      ],
+    },
+    select: { name: true },
+  });
+  const nextName = getNextAvailableName(
+    baseName,
+    existingFolders
+      .map((folder) => folder.name)
+      .filter((name) => name.toLowerCase() === baseName.toLowerCase() || /\(\d+\)$/.test(name))
+  );
+
   const folder = await prisma.folder.create({
     data: {
-      name: parsed.data.name,
+      name: nextName,
       createdById: req.user.id,
     },
   });
